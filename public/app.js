@@ -19,6 +19,7 @@ let timerId = null;
 let elapsedMs = 0;
 let questionStartMs = null;
 let history = [];
+let preloadedImageRefs = [];
 let bestMs = Number.parseInt(localStorage.getItem(BEST_TIME_KEY) || '', 10);
 let lastMs = Number.parseInt(localStorage.getItem(LAST_TIME_KEY) || '', 10);
 
@@ -80,10 +81,61 @@ function recordCurrentQuestion() {
   const current = entries[index];
   history.unshift({
     name: current.name,
-    imagePath: current.imagePaths[current.imageIndex],
+    imagePath: current.imagePath,
     elapsedMs: Date.now() - questionStartMs
   });
   renderHistory();
+}
+
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+async function preloadRoundImages(rawEntries) {
+  const urls = [...new Set(rawEntries.flatMap((entry) => entry.imagePaths || []))];
+  const loadedSet = new Set();
+  preloadedImageRefs = [];
+
+  if (urls.length === 0) {
+    return [];
+  }
+
+  let done = 0;
+  const updatePreloadText = () => {
+    result.textContent = `画像を先読み中... ${done} / ${urls.length}`;
+  };
+  updatePreloadText();
+
+  await Promise.all(urls.map((url) => new Promise((resolve) => {
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => {
+      loadedSet.add(url);
+      preloadedImageRefs.push(img);
+      done += 1;
+      updatePreloadText();
+      resolve();
+    };
+    img.onerror = () => {
+      done += 1;
+      updatePreloadText();
+      resolve();
+    };
+    img.src = url;
+  })));
+
+  return rawEntries
+    .map((entry) => {
+      const availablePaths = (entry.imagePaths || []).filter((path) => loadedSet.has(path));
+      if (availablePaths.length === 0) {
+        return null;
+      }
+      return {
+        name: entry.name,
+        imagePath: pickRandom(availablePaths)
+      };
+    })
+    .filter(Boolean);
 }
 
 function startTimer() {
@@ -147,7 +199,7 @@ function showCurrentQuestion() {
   }
 
   const current = entries[index];
-  quizImage.src = current.imagePaths[current.imageIndex];
+  quizImage.src = current.imagePath;
   quizImage.alt = `問題 ${index + 1}`;
   result.textContent = '次へで進みます。';
   nextButton.disabled = false;
@@ -166,10 +218,7 @@ async function startRound() {
     }
 
     const data = await response.json();
-    entries = (data.entries || []).map((entry) => ({
-      ...entry,
-      imageIndex: 0
-    }));
+    entries = await preloadRoundImages(data.entries || []);
     index = 0;
     resetHistory();
 
@@ -213,14 +262,6 @@ quizImage.addEventListener('error', () => {
   if (index < 0 || index >= entries.length) {
     return;
   }
-
-  const current = entries[index];
-  if (current.imageIndex < current.imagePaths.length - 1) {
-    current.imageIndex += 1;
-    quizImage.src = current.imagePaths[current.imageIndex];
-    return;
-  }
-
   result.textContent = 'この問題の画像を読み込めませんでした。次へ進んでください。';
   nextButton.disabled = false;
 });
