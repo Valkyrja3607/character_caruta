@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>エペ名前当て</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <h1>エペ名前当て</h1>
+        <div class="header-actions">
+          <button id="start-button" type="button">開始</button>
+          <button id="next-button" type="button" hidden>次へ</button>
+        </div>
+      </header>
+
+      <section class="status">
+        <p id="progress">ラウンドを開始してください。</p>
+        <p id="score">進行: 0 / 0</p>
+        <p id="timer">タイム: 00:00.000</p>
+        <p id="best-time">ベスト: --:--.---</p>
+        <p id="last-time">前回: --:--.---</p>
+      </section>
+
+      <div class="content-layout">
+        <section class="quiz-card">
+          <img id="quiz-image" alt="出題画像" />
+          <p id="result" aria-live="polite"></p>
+        </section>
+
+        <aside class="history-panel">
+          <h2>回答履歴</h2>
+          <ul id="history-list"></ul>
+        </aside>
+      </div>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
